@@ -12,6 +12,20 @@ This project uses Python 3.5.2, with the following lib dependencies:
 * [NLTK 3.2.3](https://www.nltk.org)
 * [tqdm 4.19.6](https://pypi.python.org/pypi/tqdm)
 
+## Installation Instructions
+
+Because the original repo uses an old version of TF, we also need a compatible version of Python. For this purpose, we will use `pyenv`.
+
+1. Follow instructions for installing pyenv: https://github.com/pyenv/pyenv#getting-pyenv
+2. Follow instructions for installing pyenv-virtualenv: https://github.com/pyenv/pyenv-virtualenv
+3. Install python version 3.6.15 using pyenv (this was the only one whose build succeeded for me): `pyenv install 3.6.15`
+4. Create a new virtual environment using pyenv-virtualenv: `pyenv virtualenv 3.6.15 relgan-3.6.15`
+5. Activate the virtual env: `pyenv activate relgan-3.6.15`
+6. (Finally) install tensorflow: `pip install tensorflow-cpu==1.15.0`
+  You can check that the installation works by trying out some [tf operations](https://github.com/tensorflow/tensorflow/blob/r0.11/tensorflow/g3doc/get_started/os_setup.md#run-tensorflow-from-the-command-line).
+8. And install the rest of the dependencies as well: `pip install numpy matplotlib scipy nltk tqdm`
+9. Profit $$$
+
 
 ## Instructions
 The `experiments` folders contain scripts for starting the different experiments.
