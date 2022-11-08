@@ -22,7 +22,7 @@ executable = 'python3'
 architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla']
 gantype =      ['RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN']
 opt_type =     ['adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam']
-temperature =  ['2', '5', '10', '100', '2', '5', '10', '100']
+temperature =  ['1', '5', '10', '100', '2', '5', '10', '100']
 d_lr =         ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 gadv_lr =      ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
@@ -44,8 +44,9 @@ num_rep = '64'
 sn = False
 decay = False
 adapt = 'exp'
-npre_epochs = '150'
-nadv_steps = '3000'
+npre_epochs = '20'
+# nadv_steps = '3000'
+nadv_steps = '1000'
 ntest = '20'
 
 # Paths
