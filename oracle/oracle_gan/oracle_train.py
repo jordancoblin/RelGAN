@@ -128,6 +128,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
                 print(msg)
                 log.write(msg)
                 log.write('\n')
+                log.flush()
 
                 # save the model
                 saver.save(sess, os.path.join(log_dir, 'ckpt', 'oracle.pre_model'), global_step=epoch)
@@ -180,6 +181,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
                 print(msg)
                 log.write(msg)
                 log.write('\n')
+                log.flush()
 
                 # save the model
                 saver.save(sess, os.path.join(log_dir, 'ckpt', 'oracle.adv_model'), global_step=global_step)
