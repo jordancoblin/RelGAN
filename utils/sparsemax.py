@@ -6,11 +6,9 @@ def sparsemax(z):
     cumsum = np.cumsum(sorted)
     ind = np.arange(start=1, stop=len(z)+1)
     bound = 1 + ind * sorted
-    cond = lambda i: bound[i-1] > cumsum[i-1]
-    k = [i for i in ind if cond(i)][-1]
-    print("k: ", k)
+    is_gt = np.greater(bound, cumsum)
+    k = np.max(is_gt * ind)
     tau = (cumsum[k-1] - 1)/k
-    print("tau: ", tau)
     output = np.clip(z-tau, a_min=0, a_max=None)
     return output
 
@@ -41,11 +39,8 @@ def sparsemax_yuxin(input, dim=-1):
         # Determine sparsity of projection
         bound = 1 + range * zs
         cumulative_sum_zs = torch.cumsum(zs, dim)
-        print("cumsum :", cumulative_sum_zs)
         is_gt = torch.gt(bound, cumulative_sum_zs).type(input.type())
-        print("is_gt :", is_gt)
         k = torch.max(is_gt * range, dim, keepdim=True)[1] + 1
-        print("k :", k)
 
         # Compute threshold function
         zs_sparse = is_gt * zs
