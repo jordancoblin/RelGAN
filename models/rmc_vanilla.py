@@ -44,7 +44,7 @@ def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim,
 
         # x_onehot_appr = tf.nn.softmax(tf.multiply(gumbel_t, temperature))  # one-hot-like, [batch_size x vocab_size]
         # TODO: figure out dimensions
-        x_onehot_appr = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
+        x_onehot_appr = utils.sparsemax.sparsemax2(tf.multiply(gumbel_t, temperature)) 
         x_onehot_appr = tf.Print(x_onehot_appr, [x_onehot_appr], message="x_onehot_appr: ", summarize=-1)
 
 
