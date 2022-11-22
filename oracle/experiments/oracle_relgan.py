@@ -44,7 +44,7 @@ num_rep = '64'
 sn = False
 decay = False
 adapt = 'exp'
-npre_epochs = '20'
+npre_epochs = '1'
 # nadv_steps = '3000'
 nadv_steps = '1000'
 ntest = '20'
@@ -99,7 +99,8 @@ args = [
 
     # dataset
     '--dataset', dataset,
-    '--vocab-size', '5000',
+    # '--vocab-size', '5000',
+    '--vocab-size', '10',
     '--start-token', '0',
     '--seq-len', seq_len,
     '--num-sentences', '10000',
