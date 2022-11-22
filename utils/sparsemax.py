@@ -16,7 +16,7 @@ import tensorflow as tf
 #     output = np.clip(z-tau, a_min=0, a_max=None)
 #     return output
 
-def sparsemax(z):
+def sparsemax_custom(z):
     # print ("z: ", sess.run(z))
     dim = tf.shape(z)[-1]
     # print ("dim: ", sess.run(dim))
@@ -37,7 +37,7 @@ def sparsemax(z):
     output = tf.math.maximum(z-tau, tf.cast(0, z.dtype))
     return output
 
-def sparsemax2(logits, axis: int = -1) -> tf.Tensor:
+def sparsemax(logits, axis: int = -1) -> tf.Tensor:
     r"""Sparsemax activation function.
     For each batch $i$, and class $j$,
     compute sparsemax activation function:
@@ -229,7 +229,7 @@ z = [2.5, 0.2, 0.1, 3, 0.1, 2.5]
 # z = [[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]]
 
 with tf.compat.v1.Session() as sess: 
-    s = sparsemax2(tf.constant(z))
+    s = sparsemax(tf.constant(z))
     print(s.eval())
 
 print("## Project Simplex")

@@ -29,13 +29,13 @@ mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
 head_size =    ['256', '256', '256', '256', '256', '256', '256', '256']
 num_heads =    ['2', '2', '2', '2', '2', '2', '2', '2']
 
-bs = '1'
-# bs = '64'
+# bs = '1'
+bs = '64'
 seed = '124'
 gpre_lr = '1e-2'
 hidden_dim = '32'
-seq_len = '5'
-# seq_len = '20'
+# seq_len = '5'
+seq_len = '20'
 dataset = 'oracle'
 
 gsteps = '1'
