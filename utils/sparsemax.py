@@ -17,23 +17,23 @@ import tensorflow as tf
 #     return output
 
 def sparsemax(z):
-    print ("z: ", sess.run(z))
+    # print ("z: ", sess.run(z))
     dim = tf.shape(z)[-1]
-    print ("dim: ", sess.run(dim))
+    # print ("dim: ", sess.run(dim))
     sorted = tf.sort(z, axis=-1, direction='DESCENDING')
     cumsum = tf.math.cumsum(sorted, axis=-1)
     ind = tf.range(start=1, limit=tf.cast(dim, z.dtype)+1, dtype=z.dtype)
-    print ("ind: ", sess.run(ind))
-    print ("sorted: ", sess.run(sorted))
-    print ("cumsum: ", sess.run(cumsum))
+    # print ("ind: ", sess.run(ind))
+    # print ("sorted: ", sess.run(sorted))
+    # print ("cumsum: ", sess.run(cumsum))
     bound = 1 + ind * sorted
     is_gt = tf.where(tf.math.greater(bound, cumsum), ind*1, ind*0)
-    print ("is_gt: ", sess.run(is_gt))
+    # print ("is_gt: ", sess.run(is_gt))
     
     k = tf.math.reduce_max(is_gt)
-    print ("k: ", sess.run(k))
+    # print ("k: ", sess.run(k))
     tau = (cumsum[tf.cast(k, tf.int32)-1] - 1)/k
-    print ("tau: ", sess.run(tau))
+    # print ("tau: ", sess.run(tau))
     output = tf.math.maximum(z-tau, tf.cast(0, z.dtype))
     return output
 
