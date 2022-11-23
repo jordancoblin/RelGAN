@@ -22,7 +22,7 @@ executable = 'python3'
 architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla']
 gantype =      ['RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN']
 opt_type =     ['adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam']
-temperature =  ['1', '5', '10', '100', '2', '5', '10', '100']
+temperature =  ['2', '5', '10', '100', '2', '5', '10', '100']
 d_lr =         ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 gadv_lr =      ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
@@ -30,7 +30,7 @@ head_size =    ['256', '256', '256', '256', '256', '256', '256', '256']
 num_heads =    ['2', '2', '2', '2', '2', '2', '2', '2']
 
 bs = '64'
-seed = '124'
+seed = '100'
 gpre_lr = '1e-2'
 hidden_dim = '32'
 seq_len = '20'
@@ -44,9 +44,8 @@ num_rep = '64'
 sn = False
 decay = False
 adapt = 'exp'
-npre_epochs = '20'
-# nadv_steps = '3000'
-nadv_steps = '1000'
+npre_epochs = '150'
+nadv_steps = '3000'
 ntest = '20'
 
 # Paths
@@ -54,7 +53,7 @@ rootdir = '../..'
 scriptname = 'run.py'
 cwd = os.path.dirname(os.path.abspath(__file__))
 
-outdir = os.path.join(cwd, 'out', time.strftime("%Y%m%d"), dataset,
+outdir = os.path.join(cwd, 'out', time.strftime("%Y%m%d_%H%M"), dataset,
                       'oracle_{}_{}_{}_bs{}_sl{}_sn{}_dec{}_ad-{}_npre{}_nadv{}_ms{}_hs{}_nh{}_ds{}_dlr{}_glr{}_tem{}_demb{}_nrep{}_hdim{}_sd{}'.
                       format(architecture[job_id], gantype[job_id], opt_type[job_id], bs, seq_len, int(sn),
                              int(decay), adapt, npre_epochs, nadv_steps, mem_slots[job_id], head_size[job_id],
