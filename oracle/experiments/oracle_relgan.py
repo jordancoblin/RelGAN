@@ -29,10 +29,12 @@ mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
 head_size =    ['256', '256', '256', '256', '256', '256', '256', '256']
 num_heads =    ['2', '2', '2', '2', '2', '2', '2', '2']
 
+# bs = '1'
 bs = '64'
 seed = '100'
 gpre_lr = '1e-2'
 hidden_dim = '32'
+# seq_len = '5'
 seq_len = '20'
 dataset = 'oracle'
 
@@ -44,6 +46,7 @@ num_rep = '64'
 sn = False
 decay = False
 adapt = 'exp'
+
 npre_epochs = '150'
 nadv_steps = '3000'
 ntest = '20'
@@ -98,7 +101,8 @@ args = [
 
     # dataset
     '--dataset', dataset,
-    '--vocab-size', '5000',
+    # '--vocab-size', '5000',
+    '--vocab-size', '5',
     '--start-token', '0',
     '--seq-len', seq_len,
     '--num-sentences', '10000',
