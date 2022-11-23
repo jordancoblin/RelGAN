@@ -46,7 +46,6 @@ num_rep = '64'
 sn = False
 decay = False
 adapt = 'exp'
-
 npre_epochs = '150'
 nadv_steps = '3000'
 ntest = '20'
