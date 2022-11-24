@@ -1,6 +1,5 @@
 import numpy as np
-import torch
-# import tensorflow_addons as tfa
+# import torch
 import tensorflow as tf
 
 # TODO: implement backward algo
@@ -68,9 +67,9 @@ def sparsemax(logits, axis: int = -1) -> tf.Tensor:
     is_last_axis = (axis == -1) or (axis == rank - 1)
 
     if is_last_axis:
-        output = _compute_2d_sparsemax(logits)
+        output, support_mean = _compute_2d_sparsemax(logits)
         output.set_shape(shape)
-        return output
+        return output, support_mean
 
     # If dim is not the last dimension, we have to do a transpose so that we can
     # still perform softmax on its last dimension.
@@ -81,12 +80,12 @@ def sparsemax(logits, axis: int = -1) -> tf.Tensor:
     logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
 
     # Do the actual softmax on its last dimension.
-    output = _compute_2d_sparsemax(logits)
+    output, support_mean = _compute_2d_sparsemax(logits)
     output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
 
     # Make shape inference work since transpose may erase its static shape.
     output.set_shape(shape)
-    return output
+    return output, support_mean
 
 
 def _swap_axis(logits, dim_index, last_index, **kwargs):
@@ -157,88 +156,99 @@ def _compute_2d_sparsemax(logits):
     #     p,
     # )
 
+    support = tf.math.count_nonzero(p, axis=1)
+    support_mean = tf.math.reduce_mean(tf.cast(support, dtype=tf.float32))
+    # p = tf.Print(p, [support, support_mean, support_mean.shape], message="support: ", summarize=-1)
+
     # Reshape back to original size
     p_safe = tf.reshape(p, shape_op)
-    return p_safe
+    return p_safe, support_mean
 
-def project_simplex(v, z=1):
-    v_sorted, _ = torch.sort(v, dim=0, descending=True)
-    cssv = torch.cumsum(v_sorted, dim=0) - z
-    ind = torch.arange(1, 1 + len(v)).to(dtype=v.dtype)
-    cond = v_sorted - cssv / ind > 0
-    rho = ind.masked_select(cond)[-1]
-    tau = cssv.masked_select(cond)[-1] / rho
-    w = torch.clamp(v - tau, min=0)
-    return w
+# def project_simplex(v, z=1):
+#     v_sorted, _ = torch.sort(v, dim=0, descending=True)
+#     cssv = torch.cumsum(v_sorted, dim=0) - z
+#     ind = torch.arange(1, 1 + len(v)).to(dtype=v.dtype)
+#     cond = v_sorted - cssv / ind > 0
+#     rho = ind.masked_select(cond)[-1]
+#     tau = cssv.masked_select(cond)[-1] / rho
+#     w = torch.clamp(v - tau, min=0)
+#     return w
 
-def project_simplex_grad(dout, w_star):
-    supp = w_star > 0
-    masked = dout.masked_select(supp)
-    nnz = supp.to(dtype=dout.dtype).sum()
-    masked -= masked.sum() / nnz
-    out = dout.new(dout.size()).zero_()
-    out[supp] = masked
-    return(out)
+# def project_simplex_grad(dout, w_star):
+#     supp = w_star > 0
+#     masked = dout.masked_select(supp)
+#     nnz = supp.to(dtype=dout.dtype).sum()
+#     masked -= masked.sum() / nnz
+#     out = dout.new(dout.size()).zero_()
+#     out[supp] = masked
+#     return(out)
 
-def grad_sparsemax(op, grad):
-    spm = op.outputs[0]
-    support = tf.cast(spm > 0, spm.dtype)
+# def grad_sparsemax(op, grad):
+#     spm = op.outputs[0]
+#     support = tf.cast(spm > 0, spm.dtype)
 
-    # Calculate \hat{v}, which will be a vector (scalar for each z)
-    v_hat = tf.reduce_sum(tf.mul(grad, support), 1) / tf.reduce_sum(support, 1)
+#     # Calculate \hat{v}, which will be a vector (scalar for each z)
+#     v_hat = tf.reduce_sum(tf.mul(grad, support), 1) / tf.reduce_sum(support, 1)
 
-    # Calculates J(z) * v
-    return [support * (grad - v_hat[:, np.newaxis])]
+#     # Calculates J(z) * v
+#     return [support * (grad - v_hat[:, np.newaxis])]
 
-def sparsemax_yuxin(input, dim=-1):
-        number_of_logits = input.size(dim)
+# def sparsemax_yuxin(input, dim=-1):
+#     number_of_logits = input.size(dim)
 
-        # Translate input by max for numerical stability
-        # input = input - torch.max(input, dim=dim, keepdim=True)[0].expand_as(input)
+#     # Translate input by max for numerical stability
+#     # input = input - torch.max(input, dim=dim, keepdim=True)[0].expand_as(input)
 
-        # Sort input in descending order.
-        # (NOTE: Can be replaced with linear time selection method described here:
-        # http://stanford.edu/~jduchi/projects/DuchiShSiCh08.html)
-        zs = torch.sort(input=input, dim=dim, descending=True)[0]
-        # range = torch.arange(start=1, end=number_of_logits + 1, step=1, device=zs.device, dtype=input.dtype).view(1, -1)
-        range = torch.arange(start=1, end=number_of_logits + 1, step=1, device=zs.device, dtype=input.dtype)
-        # range = range.expand_as(zs)
+#     # Sort input in descending order.
+#     # (NOTE: Can be replaced with linear time selection method described here:
+#     # http://stanford.edu/~jduchi/projects/DuchiShSiCh08.html)
+#     zs = torch.sort(input=input, dim=dim, descending=True)[0]
+#     # range = torch.arange(start=1, end=number_of_logits + 1, step=1, device=zs.device, dtype=input.dtype).view(1, -1)
+#     range = torch.arange(start=1, end=number_of_logits + 1, step=1, device=zs.device, dtype=input.dtype)
+#     # range = range.expand_as(zs)
 
-        # Determine sparsity of projection
-        bound = 1 + range * zs
-        cumulative_sum_zs = torch.cumsum(zs, dim)
-        is_gt = torch.gt(bound, cumulative_sum_zs).type(input.type())
-        k = torch.max(is_gt * range, dim, keepdim=True)[1] + 1
+#     # Determine sparsity of projection
+#     bound = 1 + range * zs
+#     cumulative_sum_zs = torch.cumsum(zs, dim)
+#     is_gt = torch.gt(bound, cumulative_sum_zs).type(input.type())
+#     k = torch.max(is_gt * range, dim, keepdim=True)[1] + 1
 
-        # Compute threshold function
-        zs_sparse = is_gt * zs
+#     # Compute threshold function
+#     zs_sparse = is_gt * zs
 
-        # Compute taus
-        taus = (torch.sum(zs_sparse, dim, keepdim=True) - 1) / k
-        print("tau: ", taus)
-        taus = taus.expand_as(input)
+#     # Compute taus
+#     taus = (torch.sum(zs_sparse, dim, keepdim=True) - 1) / k
+#     print("tau: ", taus)
+#     taus = taus.expand_as(input)
 
-        # Sparsemax
-        output = torch.max(torch.zeros_like(input), input - taus)
+#     # Sparsemax
+#     output = torch.max(torch.zeros_like(input), input - taus)
 
-        return output
+#     return output
 
+# g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+#             logits=d_out_fake - d_out_real, labels=tf.ones_like(d_out_fake)
+#         ))
 
-print("## Sparsemax")
-z = [2.5, 0.2, 0.1, 3, 0.1, 2.5]
-# z = [[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]]
+# with tf.GradientTape() as tape:
+#     print('hello')
+#     z = tf.constant([2.5, 0.2, 0.1, 3, 0.1, 2.5])
 
-with tf.compat.v1.Session() as sess: 
-    s = sparsemax(tf.constant(z))
-    print(s.eval())
+# print("## Sparsemax")
+# z = [2.5, 0.2, 0.1, 3, 0.1, 2.5]
+# # z = [[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]]
 
-print("## Project Simplex")
-s2 = project_simplex(torch.Tensor(z))
-print(s2)
+# with tf.compat.v1.Session() as sess: 
+#     s = sparsemax(tf.constant(z))
+#     print(s.eval())
 
-print("## Yuxin Sparsemax")
-s3 = sparsemax_yuxin(torch.Tensor(z))
-print(s3)
+# print("## Project Simplex")
+# s2 = project_simplex(torch.Tensor(z))
+# print(s2)
+
+# print("## Yuxin Sparsemax")
+# s3 = sparsemax_yuxin(torch.Tensor(z))
+# print(s3)
 
 # x = tf.constant([[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]])
 # sparse_x = tfa.activations.sparsemax(tf.constant(z))

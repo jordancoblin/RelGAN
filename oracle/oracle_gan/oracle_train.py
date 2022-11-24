@@ -49,7 +49,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     x_real_onehot = tf.one_hot(x_real, vocab_size)  # batch_size x seq_len x vocab_size
     assert x_real_onehot.get_shape().as_list() == [batch_size, seq_len, vocab_size]
 
-    x_fake_onehot_appr, x_fake, g_pretrain_loss, gen_o = generator(x_real=x_real, temperature=temperature)
+    x_fake_onehot_appr, x_fake, g_pretrain_loss, gen_o, sm_support = generator(x_real=x_real, temperature=temperature)
 
     d_out_real = discriminator(x_onehot=x_real_onehot)
     d_out_fake = discriminator(x_onehot=x_fake_onehot_appr)
@@ -81,6 +81,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
         tf.summary.scalar('loss/log_pg', log_pg),
         tf.summary.scalar('loss/Wall_clock_time', Wall_clock_time),
         tf.summary.scalar('loss/temperature', temperature),
+        tf.summary.scalar('sparsemax/support_mean', sm_support),
     ]
     loss_summary_op = tf.summary.merge(loss_summaries)
 
@@ -158,8 +159,9 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
             sum_writer.add_summary(loss_summary_str, niter)
 
             sess.run(global_step_op)
+            sm_support_out = sess.run(sm_support)
 
-            progress.set_description('g_loss: %4.4f, d_loss: %4.4f' % (g_loss_np, d_loss_np))
+            progress.set_description('g_loss: %4.4f, d_loss: %4.4f, sm_support: %.4f' % (g_loss_np, d_loss_np, sm_support_out))
 
             # Test
             if np.mod(niter, config['ntest']) == 0:

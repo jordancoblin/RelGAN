@@ -26,9 +26,12 @@ def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim,
     gen_x = tensor_array_ops.TensorArray(dtype=tf.int32, size=seq_len, dynamic_size=False, infer_shape=True)
     gen_x_onehot_adv = tensor_array_ops.TensorArray(dtype=tf.float32, size=seq_len, dynamic_size=False,
                                                     infer_shape=True)  # generator output (relaxed of gen_x)
+    # sm_support_mean = tf.placeholder(tf.float32, name='sparsemax_support', shape = [1,])
+    # sm_support_mean = tf.placeholder(tf.float32, name='sparsemax_support', shape=())
+    sm_support_mean = tf.Variable(1., trainable=False, name='sparsemax_support')
 
     # the generator recurrent module used for adversarial training
-    def _gen_recurrence(i, x_t, h_tm1, gen_o, gen_x, gen_x_onehot_adv):
+    def _gen_recurrence(i, x_t, h_tm1, gen_o, gen_x, gen_x_onehot_adv, sm_support_mean):
         mem_o_t, h_t = gen_mem(x_t, h_tm1)  # hidden_memory_tuple
         o_t = g_output_unit(mem_o_t)  # batch x vocab, logits not probs
         # o_t = tf.Print(o_t, [o_t], message="o_t: ", summarize=-1)
@@ -41,9 +44,7 @@ def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim,
         # tf.print("next_token_onehot: ", next_token_onehot, output_stream=sys.stdout)
 
         # x_onehot_appr = tf.nn.softmax(tf.multiply(gumbel_t, temperature))  # one-hot-like, [batch_size x vocab_size]
-        x_onehot_appr = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
-        # x_onehot_appr = tf.Print(x_onehot_appr, [x_onehot_appr], message="sparsemax_approx: ", summarize=-1)
-
+        x_onehot_appr, sm_support_mean = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
 
         # x_tp1 = tf.matmul(x_onehot_appr, g_embeddings)  # approximated embeddings, [batch_size x emb_dim]
         x_tp1 = tf.nn.embedding_lookup(g_embeddings, next_token)  # embeddings, [batch_size x emb_dim]
@@ -53,14 +54,14 @@ def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim,
 
         gen_x_onehot_adv = gen_x_onehot_adv.write(i, x_onehot_appr)
 
-        return i + 1, x_tp1, h_t, gen_o, gen_x, gen_x_onehot_adv
+        return i + 1, x_tp1, h_t, gen_o, gen_x, gen_x_onehot_adv, sm_support_mean
 
     # build a graph for outputting sequential tokens
-    _, _, _, gen_o, gen_x, gen_x_onehot_adv = control_flow_ops.while_loop(
-        cond=lambda i, _1, _2, _3, _4, _5: i < seq_len,
+    _, _, _, gen_o, gen_x, gen_x_onehot_adv, sm_support_mean = control_flow_ops.while_loop(
+        cond=lambda i, _1, _2, _3, _4, _5, _6: i < seq_len,
         body=_gen_recurrence,
         loop_vars=(tf.constant(0, dtype=tf.int32), tf.nn.embedding_lookup(g_embeddings, start_tokens),
-                   init_states, gen_o, gen_x, gen_x_onehot_adv))
+                   init_states, gen_o, gen_x, gen_x_onehot_adv, sm_support_mean))
 
     gen_o = tf.transpose(gen_o.stack(), perm=[1, 0])  # batch_size x seq_len
     gen_x = tf.transpose(gen_x.stack(), perm=[1, 0])  # batch_size x seq_len
@@ -99,7 +100,7 @@ def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim,
         )
     ) / (seq_len * batch_size)
 
-    return gen_x_onehot_adv, gen_x, pretrain_loss, gen_o
+    return gen_x_onehot_adv, gen_x, pretrain_loss, gen_o, sm_support_mean
 
 
 # The discriminator network based on the CNN classifier
