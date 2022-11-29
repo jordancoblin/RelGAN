@@ -100,8 +100,8 @@ args = [
 
     # dataset
     '--dataset', dataset,
-    # '--vocab-size', '5000',
-    '--vocab-size', '5',
+    '--vocab-size', '5000',
+    # '--vocab-size', '100',
     '--start-token', '0',
     '--seq-len', seq_len,
     '--num-sentences', '10000',
