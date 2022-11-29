@@ -2,40 +2,6 @@ import numpy as np
 # import torch
 import tensorflow as tf
 
-# TODO: implement backward algo
-# TODO: figure out how to incorporate this into TF
-# def sparsemax(z):
-#     sorted = np.sort(z)[::-1]
-#     cumsum = np.cumsum(sorted)
-#     ind = np.arange(start=1, stop=len(z)+1)
-#     bound = 1 + ind * sorted
-#     is_gt = np.greater(bound, cumsum)
-#     k = np.max(is_gt * ind)
-#     tau = (cumsum[k-1] - 1)/k
-#     output = np.clip(z-tau, a_min=0, a_max=None)
-#     return output
-
-def sparsemax_custom(z):
-    # print ("z: ", sess.run(z))
-    dim = tf.shape(z)[-1]
-    # print ("dim: ", sess.run(dim))
-    sorted = tf.sort(z, axis=-1, direction='DESCENDING')
-    cumsum = tf.math.cumsum(sorted, axis=-1)
-    ind = tf.range(start=1, limit=tf.cast(dim, z.dtype)+1, dtype=z.dtype)
-    # print ("ind: ", sess.run(ind))
-    # print ("sorted: ", sess.run(sorted))
-    # print ("cumsum: ", sess.run(cumsum))
-    bound = 1 + ind * sorted
-    is_gt = tf.where(tf.math.greater(bound, cumsum), ind*1, ind*0)
-    # print ("is_gt: ", sess.run(is_gt))
-    
-    k = tf.math.reduce_max(is_gt)
-    # print ("k: ", sess.run(k))
-    tau = (cumsum[tf.cast(k, tf.int32)-1] - 1)/k
-    # print ("tau: ", sess.run(tau))
-    output = tf.math.maximum(z-tau, tf.cast(0, z.dtype))
-    return output
-
 def sparsemax(logits, axis: int = -1) -> tf.Tensor:
     r"""Sparsemax activation function.
     For each batch $i$, and class $j$,
@@ -142,6 +108,8 @@ def _compute_2d_sparsemax(logits):
     indices = tf.stack([tf.range(0, obs), tf.reshape(k_z_safe, [-1]) - 1], axis=1)
     tau_sum = tf.gather_nd(z_cumsum, indices)
     tau_z = (tau_sum - 1) / tf.cast(k_z, logits.dtype)
+    # tau_z = tf.cast(0.01, logits.dtype)
+    tau_z = tf.Print(tau_z, [tau_z], "tau_z: ")
 
     # calculate p
     p = tf.math.maximum(tf.cast(0, logits.dtype), z - tf.expand_dims(tau_z, -1))
@@ -164,24 +132,28 @@ def _compute_2d_sparsemax(logits):
     p_safe = tf.reshape(p, shape_op)
     return p_safe, support_mean
 
-# def project_simplex(v, z=1):
-#     v_sorted, _ = torch.sort(v, dim=0, descending=True)
-#     cssv = torch.cumsum(v_sorted, dim=0) - z
-#     ind = torch.arange(1, 1 + len(v)).to(dtype=v.dtype)
-#     cond = v_sorted - cssv / ind > 0
-#     rho = ind.masked_select(cond)[-1]
-#     tau = cssv.masked_select(cond)[-1] / rho
-#     w = torch.clamp(v - tau, min=0)
-#     return w
+# def sparsemax(z):
+#     sorted = np.sort(z)[::-1]
+#     cumsum = np.cumsum(sorted)
+#     ind = np.arange(start=1, stop=len(z)+1)
+#     bound = 1 + ind * sorted
+#     is_gt = np.greater(bound, cumsum)
+#     k = np.max(is_gt * ind)
+#     tau = (cumsum[k-1] - 1)/k
+#     output = np.clip(z-tau, a_min=0, a_max=None)
+#     return output
 
-# def project_simplex_grad(dout, w_star):
-#     supp = w_star > 0
-#     masked = dout.masked_select(supp)
-#     nnz = supp.to(dtype=dout.dtype).sum()
-#     masked -= masked.sum() / nnz
-#     out = dout.new(dout.size()).zero_()
-#     out[supp] = masked
-#     return(out)
+# def sparsemax_custom(z):
+#     dim = tf.shape(z)[-1]
+#     sorted = tf.sort(z, axis=-1, direction='DESCENDING')
+#     cumsum = tf.math.cumsum(sorted, axis=-1)
+#     ind = tf.range(start=1, limit=tf.cast(dim, z.dtype)+1, dtype=z.dtype)
+#     bound = 1 + ind * sorted
+#     is_gt = tf.where(tf.math.greater(bound, cumsum), ind*1, ind*0)
+#     k = tf.math.reduce_max(is_gt)
+#     tau = (cumsum[tf.cast(k, tf.int32)-1] - 1)/k
+#     output = tf.math.maximum(z-tau, tf.cast(0, z.dtype))
+#     return output
 
 # def grad_sparsemax(op, grad):
 #     spm = op.outputs[0]
@@ -235,12 +207,12 @@ def _compute_2d_sparsemax(logits):
 #     z = tf.constant([2.5, 0.2, 0.1, 3, 0.1, 2.5])
 
 # print("## Sparsemax")
-# z = [2.5, 0.2, 0.1, 3, 0.1, 2.5]
-# # z = [[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]]
+# z = [0.5, 0.001, 0.0001, 0.0001, 0.0001, 0.5]
+# z = [[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]]
 
 # with tf.compat.v1.Session() as sess: 
 #     s = sparsemax(tf.constant(z))
-#     print(s.eval())
+#     print(sess.run(s))
 
 # print("## Project Simplex")
 # s2 = project_simplex(torch.Tensor(z))
