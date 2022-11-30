@@ -1,3 +1,4 @@
+from shutil import register_unpack_format
 import numpy as np
 # import torch
 import tensorflow as tf
@@ -33,25 +34,28 @@ def sparsemax(logits, axis: int = -1) -> tf.Tensor:
     is_last_axis = (axis == -1) or (axis == rank - 1)
 
     if is_last_axis:
-        output, support_mean = _compute_2d_sparsemax(logits)
+        # output, support_mean = _compute_2d_sparsemax(logits)
+        output, support = _compute_2d_sparsemax(logits)
         output.set_shape(shape)
-        return output, support_mean
+        # return output, support_mean
+        # return output, grad
+    else:
+        # If dim is not the last dimension, we have to do a transpose so that we can
+        # still perform softmax on its last dimension.
 
-    # If dim is not the last dimension, we have to do a transpose so that we can
-    # still perform softmax on its last dimension.
+        # Swap logits' dimension of dim and its last dimension.
+        rank_op = tf.rank(logits)
+        axis_norm = axis % rank
+        logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
 
-    # Swap logits' dimension of dim and its last dimension.
-    rank_op = tf.rank(logits)
-    axis_norm = axis % rank
-    logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
+        # Do the actual softmax on its last dimension.
+        output, support = _compute_2d_sparsemax(logits)
+        output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
 
-    # Do the actual softmax on its last dimension.
-    output, support_mean = _compute_2d_sparsemax(logits)
-    output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
+        # Make shape inference work since transpose may erase its static shape.
+        output.set_shape(shape)
 
-    # Make shape inference work since transpose may erase its static shape.
-    output.set_shape(shape)
-    return output, support_mean
+    return output
 
 
 def _swap_axis(logits, dim_index, last_index, **kwargs):
@@ -86,7 +90,8 @@ def _compute_2d_sparsemax(logits):
     # Reshape to [obs, dims] as it is almost free and means the remanining
     # code doesn't need to worry about the rank.
     z = tf.reshape(logits, [obs, dims])
-
+    # z = tf.Print(z, [z], "z in sparsemax: ", summarize=-1)
+    
     # sort z
     z_sorted, _ = tf.nn.top_k(z, k=dims)
 
@@ -109,7 +114,7 @@ def _compute_2d_sparsemax(logits):
     tau_sum = tf.gather_nd(z_cumsum, indices)
     tau_z = (tau_sum - 1) / tf.cast(k_z, logits.dtype)
     # tau_z = tf.cast(0.01, logits.dtype)
-    tau_z = tf.Print(tau_z, [tau_z], "tau_z: ")
+    # tau_z = tf.Print(tau_z, [tau_z], "tau_z: ")
 
     # calculate p
     p = tf.math.maximum(tf.cast(0, logits.dtype), z - tf.expand_dims(tau_z, -1))
@@ -125,12 +130,79 @@ def _compute_2d_sparsemax(logits):
     # )
 
     support = tf.math.count_nonzero(p, axis=1)
-    support_mean = tf.math.reduce_mean(tf.cast(support, dtype=tf.float32))
     # p = tf.Print(p, [support, support_mean, support_mean.shape], message="support: ", summarize=-1)
 
     # Reshape back to original size
     p_safe = tf.reshape(p, shape_op)
-    return p_safe, support_mean
+    return p_safe, support
+
+# Custom gradient version of sparsemax (mostly for testing purposes)
+@tf.custom_gradient
+def sparsemax_custom_grad(logits, axis: int = -1) -> tf.Tensor:
+    r"""Sparsemax activation function.
+    For each batch $i$, and class $j$,
+    compute sparsemax activation function:
+    $$
+    \mathrm{sparsemax}(x)[i, j] = \max(\mathrm{logits}[i, j] - \tau(\mathrm{logits}[i, :]), 0).
+    $$
+    See [From Softmax to Sparsemax: A Sparse Model of Attention and Multi-Label Classification](https://arxiv.org/abs/1602.02068).
+    Usage:
+    >>> x = tf.constant([[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]])
+    >>> tfa.activations.sparsemax(x)
+    <tf.Tensor: shape=(2, 3), dtype=float32, numpy=
+    array([[0., 0., 1.],
+           [0., 0., 1.]], dtype=float32)>
+    Args:
+        logits: A `Tensor`.
+        axis: `int`, axis along which the sparsemax operation is applied.
+    Returns:
+        A `Tensor`, output of sparsemax transformation. Has the same type and
+        shape as `logits`.
+    Raises:
+        ValueError: In case `dim(logits) == 1`.
+    """
+    logits = tf.convert_to_tensor(logits, name="logits")
+
+    # We need its original shape for shape inference.
+    shape = logits.get_shape()
+    rank = shape.rank
+    is_last_axis = (axis == -1) or (axis == rank - 1)
+
+    if is_last_axis:
+        # output, support_mean = _compute_2d_sparsemax(logits)
+        output, support = _compute_2d_sparsemax(logits)
+        output.set_shape(shape)
+        # return output, support_mean
+        # return output, grad
+    else:
+        # If dim is not the last dimension, we have to do a transpose so that we can
+        # still perform softmax on its last dimension.
+
+        # Swap logits' dimension of dim and its last dimension.
+        rank_op = tf.rank(logits)
+        axis_norm = axis % rank
+        logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
+
+        # Do the actual softmax on its last dimension.
+        output, support = _compute_2d_sparsemax(logits)
+        output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
+
+        # Make shape inference work since transpose may erase its static shape.
+        output.set_shape(shape)
+
+    def grad(grad):
+        non_zeros = tf.cast(output > 0, output.dtype)
+
+        # Calculate \hat{v}, which will be a vector (scalar for each z)
+        v_hat = tf.reduce_sum(grad * non_zeros, 1) / tf.reduce_sum(non_zeros, 1)
+
+        # Calculates J(z) * v
+        return [non_zeros * (grad - v_hat[:, np.newaxis])]
+
+    # support_mean = tf.math.reduce_mean(tf.cast(support, dtype=tf.float32)
+    # return output, support_mean
+
+    return output, grad
 
 # def sparsemax(z):
 #     sorted = np.sort(z)[::-1]
@@ -154,16 +226,6 @@ def _compute_2d_sparsemax(logits):
 #     tau = (cumsum[tf.cast(k, tf.int32)-1] - 1)/k
 #     output = tf.math.maximum(z-tau, tf.cast(0, z.dtype))
 #     return output
-
-# def grad_sparsemax(op, grad):
-#     spm = op.outputs[0]
-#     support = tf.cast(spm > 0, spm.dtype)
-
-#     # Calculate \hat{v}, which will be a vector (scalar for each z)
-#     v_hat = tf.reduce_sum(tf.mul(grad, support), 1) / tf.reduce_sum(support, 1)
-
-#     # Calculates J(z) * v
-#     return [support * (grad - v_hat[:, np.newaxis])]
 
 # def sparsemax_yuxin(input, dim=-1):
 #     number_of_logits = input.size(dim)
@@ -198,10 +260,6 @@ def _compute_2d_sparsemax(logits):
 
 #     return output
 
-# g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-#             logits=d_out_fake - d_out_real, labels=tf.ones_like(d_out_fake)
-#         ))
-
 # with tf.GradientTape() as tape:
 #     print('hello')
 #     z = tf.constant([2.5, 0.2, 0.1, 3, 0.1, 2.5])
@@ -210,9 +268,12 @@ def _compute_2d_sparsemax(logits):
 # z = [0.5, 0.001, 0.0001, 0.0001, 0.0001, 0.5]
 # z = [[-1.0, 0.0, 1.0], [-5.0, 1.0, 2.0]]
 
+# z = [[0.17480975, 0.45636967, 0.553059,   0.503149, 0.10903241, 0.28016326,
+#   0.32080954, 0.18035965, 0.2126013,  0.46601748]]
+
 # with tf.compat.v1.Session() as sess: 
 #     s = sparsemax(tf.constant(z))
-#     print(sess.run(s))
+#     print("sparse: ", sess.run(s))
 
 # print("## Project Simplex")
 # s2 = project_simplex(torch.Tensor(z))
