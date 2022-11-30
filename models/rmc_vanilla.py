@@ -44,7 +44,10 @@ def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim,
         # tf.print("next_token_onehot: ", next_token_onehot, output_stream=sys.stdout)
 
         # x_onehot_appr = tf.nn.softmax(tf.multiply(gumbel_t, temperature))  # one-hot-like, [batch_size x vocab_size]
-        x_onehot_appr, sm_support_mean = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
+        x_onehot_appr = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
+        
+        support = tf.math.count_nonzero(x_onehot_appr, axis=1)
+        sm_support_mean = tf.math.reduce_mean(tf.cast(support, dtype=tf.float32))
 
         # x_tp1 = tf.matmul(x_onehot_appr, g_embeddings)  # approximated embeddings, [batch_size x emb_dim]
         x_tp1 = tf.nn.embedding_lookup(g_embeddings, next_token)  # embeddings, [batch_size x emb_dim]
