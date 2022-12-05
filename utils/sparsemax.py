@@ -54,7 +54,12 @@ def sparsemax(logits, axis: int = -1) -> tf.Tensor:
 
     return output
 
-def sparsegen_lin(logits, lam = 0.0, axis = -1) -> tf.Tensor:
+def g_z_default(z):
+    """Default sparsegen transform, g(z) = z. Used for sparsegen-lin."""
+    return z
+
+def sparsegen(logits, lam = 0.0, g_z = g_z_default, axis = -1) -> tf.Tensor:
+    """Defaults to sparsegen-lin."""
     logits = tf.convert_to_tensor(logits, name="logits")
 
     # We need its original shape for shape inference.
@@ -63,7 +68,7 @@ def sparsegen_lin(logits, lam = 0.0, axis = -1) -> tf.Tensor:
     is_last_axis = (axis == -1) or (axis == rank - 1)
 
     if is_last_axis:
-        output = _compute_2d_sparsemax(logits, lam)
+        output = _compute_2d_sparsemax(logits, lam, g_z)
         output.set_shape(shape)
     else:
         # If dim is not the last dimension, we have to do a transpose so that we can
@@ -75,7 +80,7 @@ def sparsegen_lin(logits, lam = 0.0, axis = -1) -> tf.Tensor:
         logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
 
         # Do the actual softmax on its last dimension.
-        output = _compute_2d_sparsemax(logits, lam)
+        output = _compute_2d_sparsemax(logits, lam, g_z)
         output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
 
         # Make shape inference work since transpose may erase its static shape.
@@ -98,8 +103,7 @@ def _swap_axis(logits, dim_index, last_index, **kwargs):
         **kwargs,
     )
 
-
-def _compute_2d_sparsemax(logits, lam=0.0):
+def _compute_2d_sparsemax(logits, lam=0.0, g_z=g_z_default):
     """Performs the sparsemax operation when axis=-1."""
     shape_op = tf.shape(logits)
     obs = tf.math.reduce_prod(shape_op[:-1])
@@ -115,6 +119,9 @@ def _compute_2d_sparsemax(logits, lam=0.0):
     # Reshape to [obs, dims] as it is almost free and means the remanining
     # code doesn't need to worry about the rank.
     z = tf.reshape(logits, [obs, dims])
+
+    # Apply sparsegen operations
+    z = g_z(z)
     z = z * (1/(1-tf.constant(lam)))
     # z = tf.Print(z, [z], "z in sparsemax: ", summarize=-1)
     

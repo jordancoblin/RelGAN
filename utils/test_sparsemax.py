@@ -20,15 +20,27 @@ class TestSparsemax(unittest.TestCase):
         z = tf.constant([2.5, 2.0, 0.1, 3, 0.1, 2.5])
 
         # Is equivalent to sparsemax for lambda = 0
-        s = sparsemax.sparsegen_lin(z, lam=-0.)
+        s = sparsemax.sparsegen(z, lam=-0.)
         expected = sparsemax.sparsemax(z)
         np_test.assert_array_almost_equal(s.numpy(), expected.numpy(), decimal=4)
 
         # Becomes less sparse as lambda is decreased
-        s2 = sparsemax.sparsegen_lin(z, lam=-2.0)
+        s2 = sparsemax.sparsegen(z, lam=-2.0)
         s2_nonzero = tf.count_nonzero(s2)
         sparsemax_nonzero = tf.count_nonzero(s)
         self.assertGreater(s2_nonzero.numpy(), sparsemax_nonzero.numpy())
+    
+    def test_sparsegen_exp(self):
+        tf.enable_eager_execution()
+
+        z = tf.constant([2.5, 0.2, 0.1, 3, 0.1, 2.5])
+        z_exp_sum = tf.math.reduce_sum(tf.math.exp(z), axis=-1)
+        lam = 1 - z_exp_sum
+
+        # Is equivalent to softmax for g(z) = exp(z) and lambda = 1 - z_exp_sum
+        s = sparsemax.sparsegen(z, lam=lam, g_z=tf.math.exp)
+        expected = tf.nn.softmax(z)
+        np_test.assert_array_almost_equal(s.numpy(), expected.numpy(), decimal=4)
     
     # Test auto-diff gradient with a custom-defined gradient calculation
     def test_gradient(self):
