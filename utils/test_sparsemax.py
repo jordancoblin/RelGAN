@@ -13,6 +13,22 @@ class TestSparsemax(unittest.TestCase):
 
         expected = np.array([0.1667, 0.0000, 0.0000, 0.6667, 0.0000, 0.1667])
         np_test.assert_array_almost_equal(s.numpy(), expected, decimal=4)
+
+    def test_sparsegen_lin(self):
+        tf.enable_eager_execution()
+
+        z = tf.constant([2.5, 2.0, 0.1, 3, 0.1, 2.5])
+
+        # Is equivalent to sparsemax for lambda = 0
+        s = sparsemax.sparsegen_lin(z, lam=-0.)
+        expected = sparsemax.sparsemax(z)
+        np_test.assert_array_almost_equal(s.numpy(), expected.numpy(), decimal=4)
+
+        # Becomes less sparse as lambda is decreased
+        s2 = sparsemax.sparsegen_lin(z, lam=-2.0)
+        s2_nonzero = tf.count_nonzero(s2)
+        sparsemax_nonzero = tf.count_nonzero(s)
+        self.assertGreater(s2_nonzero.numpy(), sparsemax_nonzero.numpy())
     
     # Test auto-diff gradient with a custom-defined gradient calculation
     def test_gradient(self):

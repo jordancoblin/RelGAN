@@ -54,6 +54,34 @@ def sparsemax(logits, axis: int = -1) -> tf.Tensor:
 
     return output
 
+def sparsegen_lin(logits, lam = 0.0, axis = -1) -> tf.Tensor:
+    logits = tf.convert_to_tensor(logits, name="logits")
+
+    # We need its original shape for shape inference.
+    shape = logits.get_shape()
+    rank = shape.rank
+    is_last_axis = (axis == -1) or (axis == rank - 1)
+
+    if is_last_axis:
+        output = _compute_2d_sparsemax(logits, lam)
+        output.set_shape(shape)
+    else:
+        # If dim is not the last dimension, we have to do a transpose so that we can
+        # still perform softmax on its last dimension.
+
+        # Swap logits' dimension of dim and its last dimension.
+        rank_op = tf.rank(logits)
+        axis_norm = axis % rank
+        logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
+
+        # Do the actual softmax on its last dimension.
+        output = _compute_2d_sparsemax(logits, lam)
+        output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
+
+        # Make shape inference work since transpose may erase its static shape.
+        output.set_shape(shape)
+
+    return output
 
 def _swap_axis(logits, dim_index, last_index, **kwargs):
     return tf.transpose(
@@ -71,7 +99,7 @@ def _swap_axis(logits, dim_index, last_index, **kwargs):
     )
 
 
-def _compute_2d_sparsemax(logits):
+def _compute_2d_sparsemax(logits, lam=0.0):
     """Performs the sparsemax operation when axis=-1."""
     shape_op = tf.shape(logits)
     obs = tf.math.reduce_prod(shape_op[:-1])
@@ -87,6 +115,7 @@ def _compute_2d_sparsemax(logits):
     # Reshape to [obs, dims] as it is almost free and means the remanining
     # code doesn't need to worry about the rank.
     z = tf.reshape(logits, [obs, dims])
+    z = z * (1/(1-tf.constant(lam)))
     # z = tf.Print(z, [z], "z in sparsemax: ", summarize=-1)
     
     # sort z
@@ -164,7 +193,7 @@ def sparsemax_custom_grad(logits, axis: int = -1) -> tf.Tensor:
 
     if is_last_axis:
         # output, support_mean = _compute_2d_sparsemax(logits)
-        output, support = _compute_2d_sparsemax(logits)
+        output = _compute_2d_sparsemax(logits)
         output.set_shape(shape)
         # return output, support_mean
         # return output, grad
@@ -178,7 +207,7 @@ def sparsemax_custom_grad(logits, axis: int = -1) -> tf.Tensor:
         logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
 
         # Do the actual softmax on its last dimension.
-        output, support = _compute_2d_sparsemax(logits)
+        output = _compute_2d_sparsemax(logits)
         output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
 
         # Make shape inference work since transpose may erase its static shape.
