@@ -19,7 +19,7 @@ else:
 executable = 'python3'
 
 # Arguments
-architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla']
+architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla']
 gantype =      ['RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN']
 opt_type =     ['adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam']
 temperature =  ['1', '1', '1', '1', '1', '1', '1', '1']
