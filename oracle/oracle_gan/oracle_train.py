@@ -22,6 +22,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     nadv_steps = config['nadv_steps']
     seed = config['seed']
     temper = config['temperature']
+    lam = config['lam']
     adapt = config['adapt']
 
     # set random seed
@@ -49,7 +50,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     x_real_onehot = tf.one_hot(x_real, vocab_size)  # batch_size x seq_len x vocab_size
     assert x_real_onehot.get_shape().as_list() == [batch_size, seq_len, vocab_size]
 
-    x_fake_onehot_appr, x_fake, g_pretrain_loss, gen_o, sm_support = generator(x_real=x_real, temperature=temperature)
+    x_fake_onehot_appr, x_fake, g_pretrain_loss, gen_o, sm_support = generator(x_real=x_real, temperature=temperature, lam=lam)
 
     d_out_real = discriminator(x_onehot=x_real_onehot)
     d_out_fake = discriminator(x_onehot=x_fake_onehot_appr)
@@ -357,8 +358,9 @@ def get_metric_summary_op(config):
 
 def get_fixed_temperature(temper, i, nadv_steps, adapt):
     # using a fixed number of maximum adversarial steps
-    N = 5000
-    assert nadv_steps <= N
+    MAX_N = 5000
+    assert nadv_steps <= MAX_N
+    N = nadv_steps
     if adapt == 'no':
         temper_var_np = temper  # no increase
     elif adapt == 'lin':

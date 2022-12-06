@@ -7,7 +7,7 @@ import sys
 
 
 # The generator network based on the Relational Memory
-def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim, mem_slots, head_size, num_heads,
+def generator(x_real, temperature, lam, vocab_size, batch_size, seq_len, gen_emb_dim, mem_slots, head_size, num_heads,
               hidden_dim, start_token):
     start_tokens = tf.constant([start_token] * batch_size, dtype=tf.int32)
     output_size = mem_slots * head_size * num_heads
@@ -34,17 +34,18 @@ def generator(x_real, temperature, vocab_size, batch_size, seq_len, gen_emb_dim,
     def _gen_recurrence(i, x_t, h_tm1, gen_o, gen_x, gen_x_onehot_adv, sm_support_mean):
         mem_o_t, h_t = gen_mem(x_t, h_tm1)  # hidden_memory_tuple
         o_t = g_output_unit(mem_o_t)  # batch x vocab, logits not probs
-        # o_t = tf.Print(o_t, [o_t], message="o_t: ", summarize=-1)
         gumbel_t = add_gumbel(o_t)
-        # gumbel_t = tf.Print(gumbel_t, [gumbel_t], message="gumbel_t: ", summarize=-1)
         next_token = tf.stop_gradient(tf.argmax(gumbel_t, axis=1, output_type=tf.int32))
-        # next_token = tf.Print(next_token, [next_token], message="next_token: ", summarize=-1)
         next_token_onehot = tf.one_hot(next_token, vocab_size, 1.0, 0.0)
-        # next_token_onehot = tf.Print(next_token_onehot, [next_token_onehot], message="next_token_onehot: ")
-        # tf.print("next_token_onehot: ", next_token_onehot, output_stream=sys.stdout)
 
         # x_onehot_appr = tf.nn.softmax(tf.multiply(gumbel_t, temperature))  # one-hot-like, [batch_size x vocab_size]
-        x_onehot_appr, sm_support_mean = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
+        # x_onehot_appr = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
+
+        x_onehot_appr = utils.sparsemax.sparsegen(gumbel_t, lam=lam)
+        # x_onehot_appr = tf.Print(x_onehot_appr, [x_onehot_appr, tmp], message="x_onehot_appr: ", summarize=-1)
+        
+        support = tf.math.count_nonzero(x_onehot_appr, axis=1)
+        sm_support_mean = tf.math.reduce_mean(tf.cast(support, dtype=tf.float32))
 
         # x_tp1 = tf.matmul(x_onehot_appr, g_embeddings)  # approximated embeddings, [batch_size x emb_dim]
         x_tp1 = tf.nn.embedding_lookup(g_embeddings, next_token)  # embeddings, [batch_size x emb_dim]

@@ -36,6 +36,7 @@ parser.add_argument('--decay', default=False, action='store_true', help='if deca
 parser.add_argument('--adapt', default='exp', type=str, help='temperature control policy: [no, lin, exp, log, sigmoid, quad, sqrt]')
 parser.add_argument('--seed', default=123, type=int, help='for reproducing the results')
 parser.add_argument('--temperature', default=1000, type=float, help='the largest temperature')
+parser.add_argument('--lam', default=0.0, type=float, help='lambda used for sparsegen, 0.0 is equivalent to sparsemax for sparsegen-lin')
 
 # evaluation
 parser.add_argument('--nll-oracle', default=False, action='store_true', help='if using nll-oracle metric')
@@ -62,6 +63,7 @@ parser.add_argument('--data-dir', default='./data', type=str, help='Where data d
 
 
 def main():
+    print("In run.py")
     args = parser.parse_args()
     pp.pprint(vars(args))
     config = vars(args)
