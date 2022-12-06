@@ -22,21 +22,23 @@ executable = 'python3'
 architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla', 'lstm_vanilla']
 gantype =      ['RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN']
 opt_type =     ['adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam']
-temperature =  ['2', '5', '10', '100', '2', '5', '10', '100']
+temperature =  ['1', '1', '1', '1', '1', '1', '1', '1']
+lam =          [' -.5', ' -1.', ' -2.', ' -4.', ' -8.', '0.', '0.', '0.'] # Note the space prefix is needed to parse negative floats
 d_lr =         ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 gadv_lr =      ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
 head_size =    ['256', '256', '256', '256', '256', '256', '256', '256']
 num_heads =    ['2', '2', '2', '2', '2', '2', '2', '2']
+seed =         ['99', '99', '99', '99', '99', '99', '99', '99']
 
 # bs = '1'
 bs = '64'
-seed = '100'
 gpre_lr = '1e-2'
 hidden_dim = '32'
-# seq_len = '5'
 seq_len = '20'
 dataset = 'oracle'
+vocab_size = '5000'
+# vocab_size = '10'
 
 gsteps = '1'
 dsteps = '5'
@@ -45,10 +47,12 @@ dis_emb_dim = '64'
 num_rep = '64'
 sn = False
 decay = False
-adapt = 'exp'
+# adapt = 'exp'
+adapt = 'no'
 npre_epochs = '150'
 nadv_steps = '3000'
 ntest = '20'
+sparse = True
 
 # Paths
 rootdir = '../..'
@@ -56,11 +60,11 @@ scriptname = 'run.py'
 cwd = os.path.dirname(os.path.abspath(__file__))
 
 outdir = os.path.join(cwd, 'out', time.strftime("%Y%m%d_%H%M"), dataset,
-                      'oracle_{}_{}_{}_bs{}_sl{}_sn{}_dec{}_ad-{}_npre{}_nadv{}_ms{}_hs{}_nh{}_ds{}_dlr{}_glr{}_tem{}_demb{}_nrep{}_hdim{}_sd{}'.
+                      'oracle_{}_{}_{}_bs{}_sl{}_sn{}_dec{}_ad-{}_npre{}_nadv{}_ms{}_hs{}_nh{}_ds{}_dlr{}_glr{}_tem{}_demb{}_nrep{}_hdim{}_sd{}_sparse{}_lam{}'.
                       format(architecture[job_id], gantype[job_id], opt_type[job_id], bs, seq_len, int(sn),
                              int(decay), adapt, npre_epochs, nadv_steps, mem_slots[job_id], head_size[job_id],
                              num_heads[job_id], dsteps, d_lr[job_id], gadv_lr[job_id], temperature[job_id],
-                             dis_emb_dim, num_rep, hidden_dim, seed))
+                             dis_emb_dim, num_rep, hidden_dim, seed[job_id], sparse, lam[job_id]))
 
 args = [
     # Architecture
@@ -84,8 +88,9 @@ args = [
     '--log-dir', os.path.join(outdir, 'tf_logs'),
     '--sample-dir', os.path.join(outdir, 'samples'),
     '--optimizer', opt_type[job_id],
-    '--seed', seed,
+    '--seed', seed[job_id],
     '--temperature', temperature[job_id],
+    '--lam', lam[job_id],
     '--adapt', adapt,
 
     # evaluation
@@ -100,8 +105,7 @@ args = [
 
     # dataset
     '--dataset', dataset,
-    '--vocab-size', '5000',
-    # '--vocab-size', '100',
+    '--vocab-size', vocab_size,
     '--start-token', '0',
     '--seq-len', seq_len,
     '--num-sentences', '10000',
@@ -114,7 +118,6 @@ if sn:
     args += ['--sn']
 if decay:
     args += ['--decay']
-
 
 # Run
 os.environ['CUDA_VISIBLE_DEVICES'] = gpu_id
