@@ -11,7 +11,6 @@ https://arxiv.org/pdf/1905.05702 for detailed description.
 # import torch.nn as nn
 # from torch.autograd import Function
 
-import sparsemax
 import tensorflow as tf
 
 # Potential plan... try porting bisect to TF. Check gradient using custom gradient defined here: https://gist.github.com/BenjaminWegener/8fad40ffd80fbe9087d13ad464a48ca9
@@ -27,7 +26,7 @@ def _gp_inv(y, alpha):
 def _p(X, alpha):
     return _gp_inv(tf.clip_by_value(X, clip_value_min=0, clip_value_max=tf.float32.max), alpha)
 
-def entmax_bisect_tf(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
+def entmax_bisect(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
     if not isinstance(alpha, tf.Tensor):
         alpha = tf.constant(alpha, dtype=X.dtype)
     
@@ -76,8 +75,8 @@ def entmax_bisect_tf(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
     return p_m
 
 @tf.custom_gradient
-def entmax_bisect_tf_custom_grad(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
-    outputs = entmax_bisect_tf(X, alpha, dim, n_iter, ensure_sum_one)
+def entmax_bisect_custom_grad(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
+    outputs = entmax_bisect(X, alpha, dim, n_iter, ensure_sum_one)
 
     def grad_fn(d_outputs):
         with tf.name_scope('entmax_grad'):

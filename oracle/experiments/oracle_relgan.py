@@ -23,7 +23,8 @@ architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc
 gantype =      ['RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN']
 opt_type =     ['adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam']
 temperature =  ['1', '1', '1', '1', '1', '1', '1', '1']
-lam =          [' -.5', ' -1.', ' -2.', ' -4.', ' -8.', '0.', '0.', '0.'] # Note the space prefix is needed to parse negative floats
+# lam =          [' 0.', ' -1.', ' -2.', ' -4.', ' -8.', '0.', '0.', '0.'] # Note the space prefix is needed to parse negative floats
+alpha =        ['1.1', '1.2', '1.3', '1.4', '1.5', '1.6', '1.8']
 d_lr =         ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 gadv_lr =      ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
 mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
@@ -59,12 +60,12 @@ rootdir = '../..'
 scriptname = 'run.py'
 cwd = os.path.dirname(os.path.abspath(__file__))
 
-outdir = os.path.join(cwd, 'out', time.strftime("%Y%m%d_%H%M"), dataset,
-                      'oracle_{}_{}_{}_bs{}_sl{}_sn{}_dec{}_ad-{}_npre{}_nadv{}_ms{}_hs{}_nh{}_ds{}_dlr{}_glr{}_tem{}_demb{}_nrep{}_hdim{}_sd{}_sparse{}_lam{}'.
+outdir = os.path.join(cwd, 'out', time.strftime("%Y%m%d"), dataset,
+                      'oracle_{}_{}_{}_bs{}_sl{}_sn{}_dec{}_ad-{}_npre{}_nadv{}_ms{}_hs{}_nh{}_ds{}_dlr{}_glr{}_tem{}_demb{}_nrep{}_hdim{}_sd{}_sparse{}_alpha{}'.
                       format(architecture[job_id], gantype[job_id], opt_type[job_id], bs, seq_len, int(sn),
                              int(decay), adapt, npre_epochs, nadv_steps, mem_slots[job_id], head_size[job_id],
                              num_heads[job_id], dsteps, d_lr[job_id], gadv_lr[job_id], temperature[job_id],
-                             dis_emb_dim, num_rep, hidden_dim, seed[job_id], sparse, lam[job_id]))
+                             dis_emb_dim, num_rep, hidden_dim, seed[job_id], sparse, alpha[job_id]))
 
 args = [
     # Architecture
@@ -90,7 +91,7 @@ args = [
     '--optimizer', opt_type[job_id],
     '--seed', seed[job_id],
     '--temperature', temperature[job_id],
-    '--lam', lam[job_id],
+    '--alpha', alpha[job_id],
     '--adapt', adapt,
 
     # evaluation

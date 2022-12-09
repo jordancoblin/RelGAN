@@ -3,11 +3,12 @@ from utils.models.relational_memory import RelationalMemory
 from tensorflow.python.ops import tensor_array_ops, control_flow_ops
 from utils.ops import *
 import utils.sparsemax
+import utils.entmax
 import sys
 
 
 # The generator network based on the Relational Memory
-def generator(x_real, temperature, lam, vocab_size, batch_size, seq_len, gen_emb_dim, mem_slots, head_size, num_heads,
+def generator(x_real, temperature, alpha, vocab_size, batch_size, seq_len, gen_emb_dim, mem_slots, head_size, num_heads,
               hidden_dim, start_token):
     start_tokens = tf.constant([start_token] * batch_size, dtype=tf.int32)
     output_size = mem_slots * head_size * num_heads
@@ -41,7 +42,9 @@ def generator(x_real, temperature, lam, vocab_size, batch_size, seq_len, gen_emb
         # x_onehot_appr = tf.nn.softmax(tf.multiply(gumbel_t, temperature))  # one-hot-like, [batch_size x vocab_size]
         # x_onehot_appr = utils.sparsemax.sparsemax(tf.multiply(gumbel_t, temperature)) 
 
-        x_onehot_appr = utils.sparsemax.sparsegen(gumbel_t, lam=lam)
+        # x_onehot_appr = utils.sparsemax.sparsegen(gumbel_t, lam=lam)
+        x_onehot_appr = utils.entmax.entmax_bisect(gumbel_t, alpha=alpha)
+
         # x_onehot_appr = tf.Print(x_onehot_appr, [x_onehot_appr, tmp], message="x_onehot_appr: ", summarize=-1)
         
         support = tf.math.count_nonzero(x_onehot_appr, axis=1)

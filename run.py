@@ -37,6 +37,7 @@ parser.add_argument('--adapt', default='exp', type=str, help='temperature contro
 parser.add_argument('--seed', default=123, type=int, help='for reproducing the results')
 parser.add_argument('--temperature', default=1000, type=float, help='the largest temperature')
 parser.add_argument('--lam', default=0.0, type=float, help='lambda used for sparsegen, 0.0 is equivalent to sparsemax for sparsegen-lin')
+parser.add_argument('--alpha', default=1.5, type=float, help='alpha used for alpha-entmax')
 
 # evaluation
 parser.add_argument('--nll-oracle', default=False, action='store_true', help='if using nll-oracle metric')
