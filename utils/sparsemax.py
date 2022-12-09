@@ -3,7 +3,7 @@ import numpy as np
 # import torch
 import tensorflow as tf
 
-def sparsemax(logits, axis: int = -1) -> tf.Tensor:
+def sparsemax(logits, axis=-1) -> tf.Tensor:
     r"""Sparsemax activation function.
     For each batch $i$, and class $j$,
     compute sparsemax activation function:
@@ -26,40 +26,20 @@ def sparsemax(logits, axis: int = -1) -> tf.Tensor:
     Raises:
         ValueError: In case `dim(logits) == 1`.
     """
-    logits = tf.convert_to_tensor(logits, name="logits")
-
-    # We need its original shape for shape inference.
-    shape = logits.get_shape()
-    rank = shape.rank
-    is_last_axis = (axis == -1) or (axis == rank - 1)
-
-    if is_last_axis:
-        output = _compute_2d_sparsemax(logits)
-        output.set_shape(shape)
-    else:
-        # If dim is not the last dimension, we have to do a transpose so that we can
-        # still perform softmax on its last dimension.
-
-        # Swap logits' dimension of dim and its last dimension.
-        rank_op = tf.rank(logits)
-        axis_norm = axis % rank
-        logits = _swap_axis(logits, axis_norm, tf.math.subtract(rank_op, 1))
-
-        # Do the actual softmax on its last dimension.
-        output = _compute_2d_sparsemax(logits)
-        output = _swap_axis(output, axis_norm, tf.math.subtract(rank_op, 1))
-
-        # Make shape inference work since transpose may erase its static shape.
-        output.set_shape(shape)
-
-    return output
+    return sparsegen(logits, lam=0.0, g_z=g_z_default)
 
 def g_z_default(z):
     """Default sparsegen transform, g(z) = z. Used for sparsegen-lin."""
     return z
 
-def sparsegen(logits, lam = 0.0, g_z = g_z_default, axis = -1) -> tf.Tensor:
-    """Defaults to sparsegen-lin."""
+def sparsegen(logits, lam=0.0, g_z=g_z_default, axis=-1) -> tf.Tensor:
+    """
+    Sparsegen framework for controlling sparsity introduced in https://arxiv.org/pdf/1810.11975.pdf
+    Special cases:
+        - sparsegen-lin: g(z)=z
+        - sparsemax: g(z)=z, lambda=0.0
+        - softmax: g(z)=exp(z), lamba= 1 - sum_k(exp(z_k))
+    """
     logits = tf.convert_to_tensor(logits, name="logits")
 
     # We need its original shape for shape inference.
