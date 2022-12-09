@@ -35,10 +35,7 @@ def entmax_bisect_tf(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
     # print("alpha1: ", sess.run(alpha))
     alpha = tf.broadcast_to(alpha, alpha_shape)
     # print("alpha: ", sess.run(alpha))
-    # alpha = alpha.expand(*alpha_shape)
 
-    # ctx.alpha = alpha
-    # ctx.dim = dim
     d = X.shape[dim]
 
     max_val = tf.reduce_max(X, axis=dim, keepdims=True)
@@ -76,6 +73,21 @@ def entmax_bisect_tf(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
 
     # return p_m
     return p_m
+
+@tf.custom_gradient
+def entmax_bisect_tf_custom_grad(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
+    outputs = entmax_bisect_tf(X, alpha, dim, n_iter, ensure_sum_one)
+
+    def grad_fn(d_outputs):
+        with tf.name_scope('entmax_grad'):
+            outputs_sqrt = tf.math.sqrt(outputs)
+            d_inputs = d_outputs * outputs_sqrt
+            q = tf.reduce_sum(d_inputs, axis=dim, keep_dims=True) 
+            q = q / tf.reduce_sum(outputs_sqrt, axis=dim, keep_dims=True)
+            d_inputs -= q * outputs_sqrt
+            return d_inputs
+    
+    return outputs, grad_fn
 
 # Taken from https://github.com/deep-spin/entmax/blob/master/entmax/root_finding.py
 # Ported this over to tensorflow, but keeping the original for debugging purposes.

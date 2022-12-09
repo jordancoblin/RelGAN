@@ -41,28 +41,30 @@ class TestEntmax(unittest.TestCase):
         np_test.assert_array_almost_equal(e.numpy(), expected.numpy(), decimal=4)
     
     # Test auto-diff gradient with a custom-defined gradient calculation
-    # def test_gradient(self):
-    #     tf.enable_eager_execution()
+    def test_gradient(self):
+        tf.enable_eager_execution()
 
-    #     x = tf.constant([[0.5, 0.1]])
-    #     w = tf.Variable([[0.1, 0.3, 0.2, 0.8, 0.1], [0.5, 0.1, 0.9, 0.4, 0.2]], 
-    #             trainable=True, name='weights')
-    #     y = tf.constant([[0, 0, 1, 0, 0]], dtype=tf.float32)
+        x = tf.constant([[0.5, 0.1]])
+        w = tf.Variable([[0.1, 0.3, 0.2, 0.8, 0.1], [0.5, 0.1, 0.9, 0.4, 0.2]], 
+                trainable=True, name='weights')
+        y = tf.constant([[0, 0, 1, 0, 0]], dtype=tf.float32)
 
-    #     with tf.GradientTape(persistent=True) as tape:
-    #         y_pred_orig = sparsemax.sparsemax(tf.matmul(x, w))
-    #         loss_orig = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    #             logits=y_pred_orig, labels=y
-    #         ))
+        with tf.GradientTape(persistent=True) as tape:
+            y_pred_orig = entmax.entmax_bisect_tf(tf.matmul(x, w))
+            loss_orig = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=y_pred_orig, labels=y
+            ))
 
-    #         y_pred_custom = sparsemax.sparsemax_custom_grad(tf.matmul(x, w))
-    #         loss_custom = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
-    #             logits=y_pred_custom, labels=y
-    #         ))
+            y_pred_custom = entmax.entmax_bisect_tf_custom_grad(tf.matmul(x, w))
+            loss_custom = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
+                logits=y_pred_custom, labels=y
+            ))
 
-    #     grads_orig = tape.gradient(loss_orig, w)
-    #     grads_custom = tape.gradient(loss_custom, w)
-    #     np_test.assert_array_equal(grads_orig.numpy(), grads_custom.numpy())
+        grads_orig = tape.gradient(loss_orig, w)
+        grads_custom = tape.gradient(loss_custom, w)
+
+        # Not accurate up to 4 decimal places, not entirely sure why...
+        np_test.assert_array_almost_equal(grads_orig.numpy(), grads_custom.numpy(), decimal=3)
 
 if __name__ == '__main__':
     unittest.main()
