@@ -91,7 +91,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     metrics_pl, metric_summary_op = get_metric_summary_op(config)
 
     # saver
-    saver = tf.train.Saver(max_to_keep=10)
+    # saver = tf.train.Saver(max_to_keep=10)
 
     # ------------- initial the graph --------------
     with init_sess() as sess:
@@ -134,7 +134,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
                 log.flush()
 
                 # save the model
-                saver.save(sess, os.path.join(log_dir, 'ckpt', 'oracle.pre_model'), global_step=epoch)
+                # saver.save(sess, os.path.join(log_dir, 'ckpt', 'oracle.pre_model'), global_step=epoch)
 
         print('Start adversarial training...')
         progress = tqdm(range(nadv_steps))
@@ -188,7 +188,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
                 log.flush()
 
                 # save the model
-                saver.save(sess, os.path.join(log_dir, 'ckpt', 'oracle.adv_model'), global_step=global_step)
+                # saver.save(sess, os.path.join(log_dir, 'ckpt', 'oracle.adv_model'), global_step=global_step)
 
 
 # A function to get different GAN losses

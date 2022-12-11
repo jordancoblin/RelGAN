@@ -19,19 +19,23 @@ else:
 executable = 'python3'
 
 # Arguments
-architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla']
-gantype =      ['RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN']
-opt_type =     ['adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam']
-temperature =  ['1', '1', '1', '1', '1', '1', '1', '1']
+# architecture = ['rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla', 'rmc_vanilla']
+# gantype =      ['RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN', 'RSGAN']
+# opt_type =     ['adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam', 'adam']
+# temperature =  ['1', '1', '1', '1', '1', '1', '1', '1']
 # lam =          [' 0.', ' -1.', ' -2.', ' -4.', ' -8.', '0.', '0.', '0.'] # Note the space prefix is needed to parse negative floats
-alpha =        ['1.1', '1.2', '1.3', '1.4', '1.5', '1.6', '1.8']
-d_lr =         ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
-gadv_lr =      ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
-mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
-head_size =    ['256', '256', '256', '256', '256', '256', '256', '256']
-num_heads =    ['2', '2', '2', '2', '2', '2', '2', '2']
-seed =         ['99', '99', '99', '99', '99', '99', '99', '99']
+# d_lr =         ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
+# gadv_lr =      ['1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4', '1e-4']
+# mem_slots =    ['1', '1', '1', '1', '1', '1', '1', '1']
+# head_size =    ['256', '256', '256', '256', '256', '256', '256', '256']
+# num_heads =    ['2', '2', '2', '2', '2', '2', '2', '2']
+seed =         ['99', '100', '101', '99', '100', '101', '99', '100', '101',' 99', '100', '101', '99', '100', '101',]
+exp_type =     ['entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas', 'entmax_alphas']
+alpha =        ['1.1', '1.1', '1.1', '1.3', '1.3', '1.3', '1.5', '1.5', '1.5', '1.7', '1.7', '1.7', '2.0', '2.0', '2.0']
 
+architecture = 'rmc_vanilla'
+gantype = 'RSGAN'
+opt_type = 'adam'
 # bs = '1'
 bs = '64'
 gpre_lr = '1e-2'
@@ -39,10 +43,14 @@ hidden_dim = '32'
 seq_len = '20'
 dataset = 'oracle'
 vocab_size = '5000'
-# vocab_size = '10'
 
 gsteps = '1'
 dsteps = '5'
+d_lr = '1e-4'
+gadv_lr = '1e-4'
+mem_slots = '1'
+head_size = '256'
+num_heads = '2'
 gen_emb_dim = '32'
 dis_emb_dim = '64'
 num_rep = '64'
@@ -51,29 +59,31 @@ decay = False
 # adapt = 'exp'
 adapt = 'no'
 npre_epochs = '150'
-nadv_steps = '3000'
+nadv_steps = '5000'
 ntest = '20'
+
 sparse = True
+temperature = '1'
 
 # Paths
 rootdir = '../..'
 scriptname = 'run.py'
 cwd = os.path.dirname(os.path.abspath(__file__))
 
-outdir = os.path.join(cwd, 'out', time.strftime("%Y%m%d"), dataset,
-                      'oracle_{}_{}_{}_bs{}_sl{}_sn{}_dec{}_ad-{}_npre{}_nadv{}_ms{}_hs{}_nh{}_ds{}_dlr{}_glr{}_tem{}_demb{}_nrep{}_hdim{}_sd{}_sparse{}_alpha{}'.
-                      format(architecture[job_id], gantype[job_id], opt_type[job_id], bs, seq_len, int(sn),
-                             int(decay), adapt, npre_epochs, nadv_steps, mem_slots[job_id], head_size[job_id],
-                             num_heads[job_id], dsteps, d_lr[job_id], gadv_lr[job_id], temperature[job_id],
-                             dis_emb_dim, num_rep, hidden_dim, seed[job_id], sparse, alpha[job_id]))
+outdir = os.path.join(cwd, 'out', exp_type[job_id], time.strftime("%Y%m%d"), dataset,
+                      'oracle_{}_{}_{}_bs{}_sl{}_sn{}_dec{}_ad-{}_npre{}_nadv{}_ms{}_hs{}_nh{}_ds{}_dlr{}_glr{}_tem{}_demb{}_nrep{}_hdim{}_sd{}_alpha{}'.
+                      format(architecture, gantype, opt_type, bs, seq_len, int(sn),
+                             int(decay), adapt, npre_epochs, nadv_steps, mem_slots, head_size,
+                             num_heads, dsteps, d_lr, gadv_lr, temperature,
+                             dis_emb_dim, num_rep, hidden_dim, seed[job_id], alpha[job_id]))
 
 args = [
     # Architecture
     '--gf-dim', '64',
     '--df-dim', '64',
-    '--g-architecture', architecture[job_id],
-    '--d-architecture', architecture[job_id],
-    '--gan-type', gantype[job_id],
+    '--g-architecture', architecture,
+    '--d-architecture', architecture,
+    '--gan-type', gantype,
     '--hidden-dim', hidden_dim,
 
     # Training
@@ -82,15 +92,15 @@ args = [
     '--npre-epochs', npre_epochs,
     '--nadv-steps', nadv_steps,
     '--ntest', ntest,
-    '--d-lr', d_lr[job_id],
+    '--d-lr', d_lr,
     '--gpre-lr', gpre_lr,
-    '--gadv-lr', gadv_lr[job_id],
+    '--gadv-lr', gadv_lr,
     '--batch-size', bs,
     '--log-dir', os.path.join(outdir, 'tf_logs'),
     '--sample-dir', os.path.join(outdir, 'samples'),
-    '--optimizer', opt_type[job_id],
+    '--optimizer', opt_type,
     '--seed', seed[job_id],
-    '--temperature', temperature[job_id],
+    '--temperature', temperature,
     '--alpha', alpha[job_id],
     '--adapt', adapt,
 
@@ -100,9 +110,9 @@ args = [
     # '--doc-embsim',
 
     # relational memory
-    '--mem-slots', mem_slots[job_id],
-    '--head-size', head_size[job_id],
-    '--num-heads', num_heads[job_id],
+    '--mem-slots', mem_slots,
+    '--head-size', head_size,
+    '--num-heads', num_heads,
 
     # dataset
     '--dataset', dataset,
