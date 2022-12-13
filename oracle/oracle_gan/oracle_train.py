@@ -182,6 +182,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
                 metric_names = [metric.get_name() for metric in metrics]
                 for (name, score) in zip(metric_names, scores):
                     msg += ', ' + name + ': %.4f' % score
+                msg += ', support_mean: %.4f' % sm_support_out
                 print(msg)
                 log.write(msg)
                 log.write('\n')
