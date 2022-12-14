@@ -65,7 +65,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     global_step_op = global_step.assign_add(1)
 
     # Train ops
-    g_pretrain_op, g_train_op, d_train_op = get_train_ops(config, g_pretrain_loss, g_loss, d_loss, global_step)
+    g_pretrain_op, g_train_op, d_train_op, grads_summary_op = get_train_ops(config, g_pretrain_loss, g_loss, d_loss, global_step)
 
     # Record wall clock time
     time_diff = tf.placeholder(tf.float32)
@@ -157,8 +157,10 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
             sess.run(update_temperature_op, feed_dict={temp_var: temp_var_np})
 
             feed = {x_real: oracle_loader.random_batch()}
+            # g_loss_np, d_loss_np, loss_summary_str, grads_summary_str = sess.run([g_loss, d_loss, loss_summary_op, grads_summary_op], feed_dict=feed)
             g_loss_np, d_loss_np, loss_summary_str = sess.run([g_loss, d_loss, loss_summary_op], feed_dict=feed)
             sum_writer.add_summary(loss_summary_str, niter)
+            # sum_writer.add_summary(grads_summary_str, niter)
 
             sess.run(global_step_op)
             sm_support_out = sess.run(sm_support)
@@ -283,6 +285,7 @@ def get_train_ops(config, g_pretrain_loss, g_loss, d_loss, global_step):
 
     g_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='generator')
     d_vars = tf.get_collection(tf.GraphKeys.TRAINABLE_VARIABLES, scope='discriminator')
+    # g_vars = tf.Print(g_vars, [g_vars], "g_vars")
 
     grad_clip = 5.0  # keep the same with the previous setting
 
@@ -305,17 +308,35 @@ def get_train_ops(config, g_pretrain_loss, g_loss, d_loss, global_step):
         raise NotImplementedError
 
     # gradient clipping
+    # g_grads, g_vars = zip(*g_optimizer.compute_gradients(g_loss, g_vars))
+    # g_gvs = [(tf.clip_by_global_norm(grad, grad_clip), var) for grad, var in g_gvs]
+    # g_train_op = g_optimizer.apply_gradients(g_gvs)
     g_grads, _ = tf.clip_by_global_norm(tf.gradients(g_loss, g_vars), grad_clip)  # gradient clipping
+    # print("g_grads: ", g_grads)
+    g_gvs = zip(g_grads, g_vars)
     g_train_op = g_optimizer.apply_gradients(zip(g_grads, g_vars))
 
-    print('len of g_grads without None: {}'.format(len([i for i in g_grads if i is not None])))
-    print('len of g_grads: {}'.format(len(g_grads)))
+    # for g, v in grads_and_vars:
+    #     tf.summary.histogram(v.name, v)
+    #     tf.summary.histogram(v.name + '_grad', g)
+
+    # print('len of g_grads without None: {}'.format(len([i for i in g_grads if i is not None])))
+    # print('len of g_grads: {}'.format(len(g_grads)))
 
     # gradient clipping
     d_grads, _ = tf.clip_by_global_norm(tf.gradients(d_loss, d_vars), grad_clip)  # gradient clipping
+    # print("d_grads: ", d_grads)
     d_train_op = d_optimizer.apply_gradients(zip(d_grads, d_vars))
 
-    return g_pretrain_op, g_train_op, d_train_op
+    grad_summaries = []
+    # for g, v in g_gvs:
+    #     grad_summaries.append(tf.summary.histogram(v.name, v))
+    #     if g is not None:
+    #         grad_summaries.append(tf.summary.histogram(v.name + '_grad', g))
+    # grad_summaries_op = tf.summary.merge(grad_summaries)
+    grad_summaries_op = []
+
+    return g_pretrain_op, g_train_op, d_train_op, grad_summaries_op
 
 
 # A function to get various evaluation metrics
