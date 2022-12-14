@@ -44,8 +44,8 @@ def generator(x_real, temperature, alpha, vocab_size, batch_size, seq_len, gen_e
 
         # x_onehot_appr = utils.sparsemax.sparsegen(gumbel_t, lam=lam)
         x_onehot_appr = utils.entmax.entmax_bisect(gumbel_t, alpha=alpha)
-
-        # x_onehot_appr = tf.Print(x_onehot_appr, [x_onehot_appr, tmp], message="x_onehot_appr: ", summarize=-1)
+        
+        # x_onehot_appr = tf.Print(x_onehot_appr, [x_onehot_appr], message="x_onehot_appr: ", summarize=-1)
         
         support = tf.math.count_nonzero(x_onehot_appr, axis=1)
         sm_support_mean = tf.math.reduce_mean(tf.cast(support, dtype=tf.float32))
