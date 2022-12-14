@@ -10,7 +10,7 @@ class TestEntmax(unittest.TestCase):
         tf.enable_eager_execution()
 
         z = tf.constant([[2.5, 0.2, 0.1, 3],[5.0, 4.5, 1.5, 0.5]])
-        sparse = entmax.entmax_bisect_tf(z, alpha=1.3)
+        sparse = entmax.entmax_bisect(z, alpha=1.3)
 
         # Output obtained using pytorch implementation here: https://github.com/deep-spin/entmax/blob/master/entmax/root_finding.py
         # Make sure these match up
@@ -22,7 +22,7 @@ class TestEntmax(unittest.TestCase):
         tf.enable_eager_execution()
 
         z = tf.constant([2.5, 0.2, 0.1, 3, 0.1, 2.5])
-        e = entmax.entmax_bisect_tf(z, alpha=2)
+        e = entmax.entmax_bisect(z, alpha=2)
 
         # Is equivalent to softmax for alpha=2
         expected = sparsemax.sparsemax(z)
@@ -34,7 +34,7 @@ class TestEntmax(unittest.TestCase):
         z = tf.constant([2.5, 0.2, 0.1, 3, 0.1, 2.5])
 
         # Implementation doesn't support alpha=1, instead choose float close to 1
-        e = entmax.entmax_bisect_tf(z, alpha=1.00001) 
+        e = entmax.entmax_bisect(z, alpha=1.00001) 
 
         # Is equivalent to softmax for alpha~1
         expected =  tf.nn.softmax(z)
@@ -50,12 +50,12 @@ class TestEntmax(unittest.TestCase):
         y = tf.constant([[0, 0, 1, 0, 0]], dtype=tf.float32)
 
         with tf.GradientTape(persistent=True) as tape:
-            y_pred_orig = entmax.entmax_bisect_tf(tf.matmul(x, w))
+            y_pred_orig = entmax.entmax_bisect(tf.matmul(x, w))
             loss_orig = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=y_pred_orig, labels=y
             ))
 
-            y_pred_custom = entmax.entmax_bisect_tf_custom_grad(tf.matmul(x, w))
+            y_pred_custom = entmax.entmax_bisect_custom_grad(tf.matmul(x, w))
             loss_custom = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(
                 logits=y_pred_custom, labels=y
             ))
