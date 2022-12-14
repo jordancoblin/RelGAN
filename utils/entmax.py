@@ -27,13 +27,14 @@ def _p(X, alpha):
     return _gp_inv(tf.clip_by_value(X, clip_value_min=0, clip_value_max=tf.float32.max), alpha)
 
 def entmax_bisect(X, alpha=1.5, dim=-1, n_iter=50, ensure_sum_one=True):
-    if not isinstance(alpha, tf.Tensor):
+    if not isinstance(alpha, tf.Tensor) and not isinstance(alpha, tf.Variable):
         alpha = tf.constant(alpha, dtype=X.dtype)
     
     alpha_shape = list(X.shape)
     alpha_shape[dim] = 1
     # print("alpha1: ", sess.run(alpha))
     alpha = tf.broadcast_to(alpha, alpha_shape)
+    # alpha = tf.Print(alpha, [alpha], "alpha")
     # print("alpha: ", sess.run(alpha))
 
     d = X.shape[dim]

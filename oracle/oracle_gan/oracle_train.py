@@ -23,7 +23,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     seed = config['seed']
     temper = config['temperature']
     # lam = config['lam']
-    alpha = config['alpha']
+    max_alpha = config['alpha']
     adapt = config['adapt']
 
     # set random seed
@@ -47,6 +47,7 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     x_real = tf.placeholder(tf.int32, [batch_size, seq_len], name="x_real")  # tokens of oracle sequences
 
     temperature = tf.Variable(1., trainable=False, name='temperature')
+    alpha = tf.Variable(1., trainable=False, name='alpha')
 
     x_real_onehot = tf.one_hot(x_real, vocab_size)  # batch_size x seq_len x vocab_size
     assert x_real_onehot.get_shape().as_list() == [batch_size, seq_len, vocab_size]
@@ -76,13 +77,17 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
     temp_var = tf.placeholder(tf.float32)
     update_temperature_op = temperature.assign(temp_var)
 
+    # Alpha placeholder
+    alpha_var = tf.placeholder(tf.float32)
+    update_alpha_op = alpha.assign(alpha_var)
+
     # Loss summaries
     loss_summaries = [
         tf.summary.scalar('loss/discriminator', d_loss),
         tf.summary.scalar('loss/g_loss', g_loss),
         tf.summary.scalar('loss/log_pg', log_pg),
         tf.summary.scalar('loss/Wall_clock_time', Wall_clock_time),
-        tf.summary.scalar('loss/temperature', temperature),
+        tf.summary.scalar('entmax/alpha', alpha),
         tf.summary.scalar('sparsemax/support_mean', sm_support),
     ]
     loss_summary_op = tf.summary.merge(loss_summaries)
@@ -142,6 +147,11 @@ def oracle_train(generator, discriminator, oracle_model, oracle_loader, gen_load
             niter = sess.run(global_step)
 
             t0 = time.time()
+
+            # alpha
+            alpha_var_np = get_annealed_alpha(max_alpha, niter, nadv_steps)
+            sess.run(update_alpha_op, feed_dict={alpha_var: alpha_var_np})
+            # print("alpha_var_np: ", alpha_var_np)
 
             # run adversarial training
             for _ in range(config['gsteps']):
@@ -357,6 +367,8 @@ def get_metric_summary_op(config):
     metric_summary_op = tf.summary.merge(metrics_sum)
     return metrics_pl, metric_summary_op
 
+def get_annealed_alpha(max_alpha, i, nadv_steps):
+    return max_alpha ** ((i+1)/nadv_steps)  # exponential increase
 
 def get_fixed_temperature(temper, i, nadv_steps, adapt):
     # using a fixed number of maximum adversarial steps
