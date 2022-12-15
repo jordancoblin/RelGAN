@@ -14,4 +14,4 @@ module load python/3.7
 cd oracle/experiments
 echo "Current working directory: `pwd`"
 echo "Running main.py"
-python oracle_relgan.py 0 -1
+python oracle_relgan.py $SLURM_ARRAY_TASK_ID -1
